@@ -77,3 +77,59 @@ def upload_file(request):
     except Exception as e:
         print(traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def chat_with_ai(request):
+    try:
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+        import json
+        data = json.loads(request.body)
+        user_message = data.get('message')
+        video_context = data.get('context', {})
+
+        if not user_message:
+            return JsonResponse({'error': 'Message is required'}, status=400)
+
+        # Construct the system message with context about the video analysis
+        system_message = """You are DE-fake it's AI expert assistant specialized in deepfake detection. 
+        You are knowledgeable about various deepfake detection techniques, their implications, and how to interpret results.
+        Always maintain a friendly and professional tone, using emojis appropriately in your responses.
+        When discussing confidence scores, explain what they mean in practical terms.
+        Help users understand the implications of the detection results and what they should do next."""
+
+        try:
+            # Create the initial context message about the analysis results
+            context_message = f"""Analysis Context 🔍:
+            - Detection Result: {video_context.get('result', 'Unknown')} {'🚫' if video_context.get('result') == 'Fake' else '✅'}
+            - Confidence Score: {video_context.get('confidence', 0)}% {'🎯' if video_context.get('confidence', 0) > 80 else '📊'}
+            
+            User Question: {user_message}"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": context_message}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            
+            ai_response = response.choices[0].message.content
+
+            return JsonResponse({
+                'response': ai_response
+            })
+
+        except Exception as e:
+            print("OpenAI API error:", e)
+            return JsonResponse({
+                'error': 'Failed to get response from AI',
+                'details': str(e)
+            }, status=500)
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
