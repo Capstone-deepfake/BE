@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import upload_file
+from . import views
 
 urlpatterns = [
-    path('upload/', upload_file, name='upload_file'),  # ✅ /api/upload/가 되는 포인트
+    path('upload/', views.upload_file, name='upload_file'),  # ✅ /api/upload/가 되는 포인트
+    path('chat/', views.chat_with_ai, name='chat_with_ai'),
 ]
