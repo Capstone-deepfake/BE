@@ -1,18 +1,28 @@
 # backend/deepfake/modelNet.py
 
 import torch.nn as nn
+from torchvision import models
+import torch
 
-class DeepfakeDetector(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # --- 예시 구조(실제 구조와 완전히 일치시켜야 합니다) ---
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
-        self.relu = nn.ReLU()
-        self.pool = nn.MaxPool2d(2, 2)
-        # (224→112) 가정. 실제 크기를 맞춰야 합니다.
-        self.fc = nn.Linear(16 * 112 * 112, 2)
+class Model(nn.Module):
+    def __init__(self, num_classes,model_name="resnext50_32x4d", lstm_layers=1 , hidden_dim = 2048, bidirectional = False):
+        super(Model, self).__init__()
+        self.model_name = model_name 
+
+        model = models.resnext50_32x4d(pretrained = True) #Residual Network CNN
+        self.model = nn.Sequential(*list(model.children())[:-2])
+        self.latent_dim = 2048
+        self.lstm = nn.LSTM(self.latent_dim,hidden_dim, lstm_layers,  bidirectional)
+        self.relu = nn.LeakyReLU()
+        self.dp = nn.Dropout(0.4)
+        self.linear1 = nn.Linear(hidden_dim,num_classes) # hidden_dim 변수로 넣어줌
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
-        x = self.pool(self.relu(self.conv1(x)))
-        x = x.view(x.size(0), -1)
-        return self.fc(x)
+        batch_size,seq_length, c, h, w = x.shape
+        x = x.view(batch_size * seq_length, c, h, w)
+        fmap = self.model(x)
+        x = self.avgpool(fmap)
+        x = x.view(batch_size,seq_length,self.latent_dim) # resnext50_32x4d, xception : 2048, efficientnet-b0 : 1280
+        x_lstm,_ = self.lstm(x,None)
+        return fmap,self.dp(self.linear1(torch.mean(x_lstm,dim = 1)))
