@@ -46,7 +46,6 @@ logger.addHandler(c_handler)
 logger.addHandler(f_handler)
 
 load_dotenv()
-# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 
@@ -60,8 +59,6 @@ def get_gpt_explanation_with_data_uri(image_path: str, prediction: str, confiden
         with open(image_path, "rb") as f:
             base64_image = base64.b64encode(f.read()).decode("utf-8")
 
-        # Initialize OpenAI client
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
         # Send request to GPT-4 Vision
